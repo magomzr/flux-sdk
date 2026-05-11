@@ -1,51 +1,55 @@
 # @magomzr/flux-sdk
 
-SDK para consumir feature flags desde un servidor Flux.
+SDK for consuming feature flags from a Flux server.
 
-## Instalación
+## Installation
 
 ```sh
 npm install @magomzr/flux-sdk
 ```
 
-## Uso
+## Usage
 
 ```ts
 import { FluxClient } from "@magomzr/flux-sdk";
 
 const client = new FluxClient({
-  apiKey: "tu-api-key",
-  baseUrl: "https://tu-servidor-flux.com",
-  pollInterval: 30_000, // opcional, default 30s
-  defaults: {           // opcional, valores de fallback
-    "mi-feature": false,
+  apiKey: "your-api-key",
+  baseUrl: "https://your-flux-server.com",
+  pollInterval: 30_000, // optional, default 30s
+  defaults: {           // optional, fallback values
+    "my-feature": false,
   },
 });
 
 await client.initialize();
 
-// Verificar si un flag está activo
-client.isEnabled("mi-feature"); // boolean
+// Check if a flag is enabled
+client.isEnabled("my-feature"); // boolean
 
-// Obtener el valor de un flag con variante
-client.getVariant<string>("color-boton"); // string | null
+// Get a variant flag value
+client.getVariant<string>("button-color"); // string | null
 
-// Obtener todos los flags
+// Get all flags
 client.getAllFlags(); // FlagMap
 
-// Detener el polling al cerrar la app
+// Stop polling when shutting down
 client.destroy();
 ```
 
-## Cómo funciona
+## How it works
 
-Al llamar `initialize()`, el cliente hace un fetch inicial de todos los flags y arranca un poller que los refresca en el intervalo configurado. Los flags se guardan en memoria. Si el servidor falla, se conservan los valores del cache anterior.
+When `initialize()` is called, the client does an initial fetch of all flags and starts a poller that refreshes them at the configured interval. Flags are stored in memory. If the server fails, the previous cached values are kept.
 
-## Configuración
+## Configuration
 
-| Opción         | Tipo     | Requerido | Default  | Descripción                        |
-|----------------|----------|-----------|----------|------------------------------------|
-| `apiKey`       | `string` | ✓         | —        | Clave de autenticación             |
-| `baseUrl`      | `string` | ✓         | —        | URL base del servidor Flux         |
-| `pollInterval` | `number` | —         | `30000`  | Intervalo de refresco en ms        |
-| `defaults`     | `object` | —         | `{}`     | Valores de fallback por flag key   |
+| Option         | Type     | Required | Default  | Description                        |
+|----------------|----------|----------|----------|------------------------------------|
+| `apiKey`       | `string` | ✓        | —        | Authentication key                 |
+| `baseUrl`      | `string` | ✓        | —        | Base URL of the Flux server        |
+| `pollInterval` | `number` | —        | `30000`  | Refresh interval in ms             |
+| `defaults`     | `object` | —        | `{}`     | Fallback values per flag key       |
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md).

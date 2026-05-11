@@ -1,7 +1,7 @@
 export interface FluxConfig {
   apiKey: string;
   baseUrl: string;
-  pollInterval?: number; // ms, default 30_000
+  pollInterval?: number; // ms, defaults to 30_000
   defaults?: Record<string, boolean | string | number>;
 }
 

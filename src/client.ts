@@ -78,7 +78,7 @@ export class FluxClient {
 
       if (!res.ok) {
         console.warn(`[flux] Failed to fetch flags: ${res.status}`);
-        return; // conserva el cache anterior si falla
+        return; // keep previous cache if request fails
       }
 
       const flags: Flag[] = await res.json();
