@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.5.0]
+- Added `pollInterval: 0` support to disable polling — flags fetched once on initialize
+- Added ETag / `If-None-Match` support to avoid processing unchanged responses (304)
+- Updated Angular usage guide: simplified to direct `inject(FluxClient)` in components, removed global signal pattern
+
 ## [0.4.0]
 - Added Angular usage guide to README with `app.config.ts` setup and reactive signals example
 

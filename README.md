@@ -16,7 +16,7 @@ import { FluxClient } from "@magomzr/flux-sdk";
 const client = new FluxClient({
   apiKey: "your-api-key",
   baseUrl: "https://your-flux-server.com",
-  pollInterval: 30_000, // optional, default 30s
+  pollInterval: 30_000, // optional, default 30s. Set to 0 to disable polling.
   defaults: {           // optional, fallback values
     "my-feature": false,
   },
@@ -39,28 +39,28 @@ client.destroy();
 
 ## How it works
 
-When `initialize()` is called, the client does an initial fetch of all flags and starts a poller that refreshes them at the configured interval. Flags are stored in memory. If the server fails, the previous cached values are kept.
+When `initialize()` is called, the client fetches all flags from the server and stores them in memory. If `pollInterval` is greater than 0, a poller starts and refreshes the flags at the configured interval — waiting for each fetch to complete before scheduling the next one. If the server returns a `304 Not Modified`, the cache is kept as-is. If the server fails, the previous cached values are preserved.
+
+Setting `pollInterval: 0` disables polling entirely. Flags are fetched once on initialize and stay fresh for the lifetime of the session.
 
 ## Configuration
 
-| Option         | Type     | Required | Default  | Description                        |
-|----------------|----------|----------|----------|------------------------------------|
-| `apiKey`       | `string` | ✓        | —        | Authentication key                 |
-| `baseUrl`      | `string` | ✓        | —        | Base URL of the Flux server        |
-| `pollInterval` | `number` | —        | `30000`  | Refresh interval in ms             |
-| `onUpdate`     | `function` | —       | —        | Called after each poll when flags change |
+| Option         | Type       | Required | Default  | Description                                          |
+|----------------|------------|----------|----------|------------------------------------------------------|
+| `apiKey`       | `string`   | ✓        | —        | Authentication key                                   |
+| `baseUrl`      | `string`   | ✓        | —        | Base URL of the Flux server                          |
+| `pollInterval` | `number`   | —        | `30000`  | Refresh interval in ms. Set to `0` to disable.      |
+| `defaults`     | `object`   | —        | `{}`     | Fallback values per flag key                         |
+| `onUpdate`     | `function` | —        | —        | Called after each poll when flags change             |
 
 ## Usage with Angular
 
 ### 1. Configure providers in `app.config.ts`
 
 ```ts
-import { ApplicationConfig, APP_INITIALIZER, signal } from '@angular/core';
-import { FluxClient, FlagMap } from '@magomzr/flux-sdk';
+import { ApplicationConfig, provideAppInitializer, inject } from '@angular/core';
+import { FluxClient } from '@magomzr/flux-sdk';
 import { environment } from './environments/environment';
-
-// Global signal — holds the latest flag state
-export const flags = signal<FlagMap>({});
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -69,19 +69,12 @@ export const appConfig: ApplicationConfig = {
       useFactory: () => new FluxClient({
         apiKey: environment.fluxApiKey,
         baseUrl: environment.fluxBaseUrl,
-        pollInterval: 30_000,
-        onUpdate: (updated) => flags.set(updated),
+        pollInterval: 0, // fetch once on initialize
       }),
     },
-    {
-      provide: APP_INITIALIZER,
-      useFactory: (flux: FluxClient) => async () => {
-        await flux.initialize();
-        flags.set(flux.getAllFlags());
-      },
-      deps: [FluxClient],
-      multi: true,
-    },
+    provideAppInitializer(async () => {
+      await inject(FluxClient).initialize();
+    }),
   ],
 };
 ```
@@ -89,28 +82,30 @@ export const appConfig: ApplicationConfig = {
 ### 2. Use flags in components
 
 ```ts
-import { Component, computed } from '@angular/core';
-import { flags } from './app.config';
+import { Component, inject } from '@angular/core';
+import { FluxClient } from '@magomzr/flux-sdk';
 
 @Component({
   selector: 'app-feature',
   template: `
-    @if (showNewUi()) {
+    @if (showNewUi) {
       <app-new-ui />
     } @else {
       <app-legacy-ui />
     }
 
-    <button [style.background]="bannerColor()">Click me</button>
+    <button [style.background]="bannerColor">Click me</button>
   `,
 })
 export class FeatureComponent {
-  showNewUi  = computed(() => flags()['new_ui']?.enabled ?? false);
-  bannerColor = computed(() => flags()['banner_color']?.value as string ?? 'blue');
+  private flux = inject(FluxClient);
+
+  showNewUi  = this.flux.isEnabled('new_ui');
+  bannerColor = this.flux.getVariant<string>('banner_color') ?? 'blue';
 }
 ```
 
-`flags` is a global signal updated automatically after each poll. Any `computed` that reads it will re-render when flags change — no wrapper service needed.
+Flags are read once when the component is constructed. Since `initialize()` runs before the app renders via `provideAppInitializer`, all flags are available immediately — no loading states needed.
 
 ## Changelog
 

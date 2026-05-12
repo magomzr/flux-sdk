@@ -15,6 +15,7 @@ export class FluxClient {
   private readonly cache: FlagCache;
   private readonly poller: Poller;
   private initialized: boolean = false;
+  private etag: string | null = null;
 
   constructor(config: FluxConfig) {
     this.validateConfig(config);
@@ -34,7 +35,12 @@ export class FluxClient {
     if (this.initialized) return;
 
     await this.fetchFlags();
-    this.poller.start(() => this.fetchFlags(), this.config.pollInterval);
+
+    // pollInterval: 0 disables polling — flags are only fetched once on initialize
+    if (this.config.pollInterval > 0) {
+      this.poller.start(() => this.fetchFlags(), this.config.pollInterval);
+    }
+
     this.initialized = true;
   }
 
@@ -78,27 +84,34 @@ export class FluxClient {
 
   private async fetchFlags() {
     try {
-      const res = await fetch(`${this.config.baseUrl}/sdk/flags`, {
-        headers: {
-          "X-Api-Key": this.config.apiKey,
-          "Content-Type": "application/json",
-        },
-      });
+      const headers: Record<string, string> = {
+        "X-Api-Key": this.config.apiKey,
+        "Content-Type": "application/json",
+      };
+
+      // send ETag from previous response to allow server to return 304
+      if (this.etag) {
+        headers["If-None-Match"] = this.etag;
+      }
+
+      const res = await fetch(`${this.config.baseUrl}/sdk/flags`, { headers });
+
+      // 304 means nothing changed — keep cache as-is
+      if (res.status === 304) return;
 
       if (!res.ok) {
         console.warn(`[flux] Failed to fetch flags: ${res.status}`);
         return; // keep previous cache if request fails
       }
 
+      // store ETag for next request if server provides one
+      const newEtag = res.headers.get("ETag");
+      if (newEtag) this.etag = newEtag;
+
       const flags: Flag[] = await res.json();
       const map: FlagMap = Object.fromEntries(flags.map((f) => [f.key, f]));
-
-      const previous = JSON.stringify(this.cache.getAll());
-      const incoming = JSON.stringify(map);
-      if (previous !== incoming) {
-        this.cache.set(map);
-        this.config.onUpdate?.(map);
-      }
+      this.cache.set(map);
+      this.config.onUpdate?.(map);
     } catch (err) {
       console.warn(
         "[flux] network error fetching flags, using cached values. Error",
