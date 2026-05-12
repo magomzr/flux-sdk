@@ -48,7 +48,69 @@ When `initialize()` is called, the client does an initial fetch of all flags and
 | `apiKey`       | `string` | ✓        | —        | Authentication key                 |
 | `baseUrl`      | `string` | ✓        | —        | Base URL of the Flux server        |
 | `pollInterval` | `number` | —        | `30000`  | Refresh interval in ms             |
-| `defaults`     | `object` | —        | `{}`     | Fallback values per flag key       |
+| `onUpdate`     | `function` | —       | —        | Called after each poll when flags change |
+
+## Usage with Angular
+
+### 1. Configure providers in `app.config.ts`
+
+```ts
+import { ApplicationConfig, APP_INITIALIZER, signal } from '@angular/core';
+import { FluxClient, FlagMap } from '@magomzr/flux-sdk';
+import { environment } from './environments/environment';
+
+// Global signal — holds the latest flag state
+export const flags = signal<FlagMap>({});
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    {
+      provide: FluxClient,
+      useFactory: () => new FluxClient({
+        apiKey: environment.fluxApiKey,
+        baseUrl: environment.fluxBaseUrl,
+        pollInterval: 30_000,
+        onUpdate: (updated) => flags.set(updated),
+      }),
+    },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: (flux: FluxClient) => async () => {
+        await flux.initialize();
+        flags.set(flux.getAllFlags());
+      },
+      deps: [FluxClient],
+      multi: true,
+    },
+  ],
+};
+```
+
+### 2. Use flags in components
+
+```ts
+import { Component, computed } from '@angular/core';
+import { flags } from './app.config';
+
+@Component({
+  selector: 'app-feature',
+  template: `
+    @if (showNewUi()) {
+      <app-new-ui />
+    } @else {
+      <app-legacy-ui />
+    }
+
+    <button [style.background]="bannerColor()">Click me</button>
+  `,
+})
+export class FeatureComponent {
+  showNewUi  = computed(() => flags()['new_ui']?.enabled ?? false);
+  bannerColor = computed(() => flags()['banner_color']?.value as string ?? 'blue');
+}
+```
+
+`flags` is a global signal updated automatically after each poll. Any `computed` that reads it will re-render when flags change — no wrapper service needed.
 
 ## Changelog
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.4.0]
+- Added Angular usage guide to README with `app.config.ts` setup and reactive signals example
+
 ## [0.3.0]
 - `onUpdate` callback in `FluxConfig` — called after each successful poll when flags have changed
 - Flags are now compared before updating the cache, avoiding unnecessary updates when nothing changed
