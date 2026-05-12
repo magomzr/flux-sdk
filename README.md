@@ -107,6 +107,38 @@ export class FeatureComponent {
 
 Flags are read once when the component is constructed. Since `initialize()` runs before the app renders via `provideAppInitializer`, all flags are available immediately — no loading states needed.
 
+### 3. Using flags in services and business logic
+
+`isEnabled()`, `getVariant()`, and `getAllFlags()` all read from the in-memory cache synchronously — no additional requests are made. You can inject `FluxClient` anywhere in your app:
+
+```ts
+import { Injectable, inject } from '@angular/core';
+import { FluxClient } from '@magomzr/flux-sdk';
+
+@Injectable({ providedIn: 'root' })
+export class PricingService {
+  private flux = inject(FluxClient);
+
+  calculateDiscount(basePrice: number): number {
+    if (!this.flux.isEnabled('discount_feature')) return 0;
+
+    const rate = this.flux.getVariant<number>('discount_rate') ?? 0.1;
+    return basePrice * rate;
+  }
+}
+```
+
+Or iterate over all flags directly:
+
+```ts
+const allFlags = this.flux.getAllFlags();
+const activeFlags = Object.values(allFlags).filter(f => f.enabled);
+```
+
+This is where polling shines. When `pollInterval` is set, the cache updates in the background automatically. Every time a service method is called, it reads the latest value — no page refresh needed. A discount rate, a feature gate, a pricing rule — all stay current throughout the session without any extra wiring.
+
+For UI rendering, flags are read once when the component is constructed, so polling has no effect on the template. If you need the template to react to flag changes, use the `onUpdate` callback combined with a signal. For everything else — services, calculations, guards, interceptors — polling + direct `inject` is all you need.
+
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md).
