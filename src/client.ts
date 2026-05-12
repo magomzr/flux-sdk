@@ -2,8 +2,16 @@ import { FlagCache } from "./cache.js";
 import { Poller } from "./poller.js";
 import type { Flag, FlagMap, FluxConfig } from "./types.js";
 
+interface ResolvedConfig {
+  apiKey: string;
+  baseUrl: string;
+  pollInterval: number;
+  defaults: Record<string, boolean | string | number>;
+  onUpdate: ((flags: FlagMap) => void) | undefined;
+}
+
 export class FluxClient {
-  private readonly config: Required<FluxConfig>;
+  private readonly config: ResolvedConfig;
   private readonly cache: FlagCache;
   private readonly poller: Poller;
   private initialized: boolean = false;
@@ -14,6 +22,7 @@ export class FluxClient {
     this.config = {
       pollInterval: 30_000,
       defaults: {},
+      onUpdate: undefined,
       ...config,
     };
 
@@ -83,7 +92,13 @@ export class FluxClient {
 
       const flags: Flag[] = await res.json();
       const map: FlagMap = Object.fromEntries(flags.map((f) => [f.key, f]));
-      this.cache.set(map);
+
+      const previous = JSON.stringify(this.cache.getAll());
+      const incoming = JSON.stringify(map);
+      if (previous !== incoming) {
+        this.cache.set(map);
+        this.config.onUpdate?.(map);
+      }
     } catch (err) {
       console.warn(
         "[flux] network error fetching flags, using cached values. Error",

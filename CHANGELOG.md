@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.0]
+- `onUpdate` callback in `FluxConfig` — called after each successful poll when flags have changed
+- Flags are now compared before updating the cache, avoiding unnecessary updates when nothing changed
+- Internal config type refactored to `ResolvedConfig` to properly handle optional `onUpdate` with `exactOptionalPropertyTypes`
+
 ## [0.2.0]
 - Update documentation.
 - Deploy on new tags.
