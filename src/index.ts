@@ -1,2 +1,2 @@
-export { FluxClient } from "./client";
-export type { FluxConfig, Flag, FlagMap } from "./types";
+export { FluxClient } from "./client.js";
+export type { FluxConfig, Flag, FlagMap } from "./types.js";

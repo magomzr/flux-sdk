@@ -1,9 +1,18 @@
 export interface FluxConfig {
+  /** SDK API key — required */
   apiKey: string;
+  /** Base URL of the Flux server — required */
   baseUrl: string;
-  pollInterval?: number; // ms, defaults to 30_000
+  /** Optional fallback values for flags that haven't been loaded yet */
   defaults?: Record<string, boolean | string | number>;
-  onUpdate?: (flags: FlagMap) => void; // called after each successful poll with updated flags
+  /** Called after each successful fetch with the updated flags */
+  onUpdate?: (flags: FlagMap) => void;
+  /**
+   * Auto-refresh interval in ms. Disabled by default (0).
+   * When set > 0, the SDK will refetch flags in background at this interval.
+   * For most use cases, manual refresh() calls are preferred.
+   */
+  autoRefresh?: number;
 }
 
 export interface Flag {

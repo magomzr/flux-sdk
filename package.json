@@ -1,6 +1,6 @@
 {
   "name": "@magomzr/flux-sdk",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "SDK for Flux feature flags",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
