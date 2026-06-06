@@ -79,6 +79,54 @@ const client = new FluxClient({
 
 This is opt-in and disabled by default. For most use cases, manual `refresh()` calls give you more control with less server load.
 
+## Reacting to flag changes with `onUpdate`
+
+The `onUpdate` callback fires after every successful fetch (whether from `initialize()`, `refresh()`, or `autoRefresh`) when flags are loaded into the cache. Use it to react to changes in your app:
+
+```ts
+const client = new FluxClient({
+  apiKey: "flux_production_...",
+  baseUrl: "https://your-flux-server.com",
+  onUpdate: (flags) => {
+    console.log("Flags updated:", Object.keys(flags).length);
+    // Trigger re-renders, update signals, sync state, etc.
+  },
+});
+```
+
+### Angular example with signals
+
+```ts
+import { signal } from '@angular/core';
+import { FluxClient } from '@magomzr/flux-sdk';
+
+// In your app.config.ts or a service:
+const flagsSignal = signal<FlagMap>({});
+
+const client = new FluxClient({
+  apiKey: environment.fluxApiKey,
+  baseUrl: environment.fluxBaseUrl,
+  onUpdate: (flags) => flagsSignal.set(flags),
+});
+```
+
+Now `flagsSignal` is reactive — any component using it via `computed()` will re-render automatically when flags change after a `refresh()` call.
+
+```ts
+@Component({
+  template: `<h1>{{ title() }}</h1>`,
+})
+export class AppComponent {
+  private flags = inject(FLAGS_SIGNAL); // your signal token
+  title = computed(() => {
+    const flag = this.flags()['app_title'];
+    return flag?.enabled ? flag.value as string : 'Default Title';
+  });
+}
+```
+
+This pattern gives you full reactivity without polling — just call `refresh()` when appropriate and the UI updates via signals.
+
 ## Usage with Angular
 
 ### 1. Configure in `app.config.ts`

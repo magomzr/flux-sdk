@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.6.1]
+- Added `onUpdate` documentation with usage examples
+- Added Angular signals pattern example showing reactive flag updates after `refresh()`
+
 ## [0.6.0]
 
 - **Breaking:** Removed `pollInterval` config option — replaced with `autoRefresh` (disabled by default)
